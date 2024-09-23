@@ -428,23 +428,12 @@ async def query_command(bot: Client, message: Message):
 
     sent_message = await message.reply("💭 Thinking...")
 
+    model = GenerativeModel("gemini-1.5-flash")  # Initialize the model
+
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=AIzaSyCvbPRwFY0T3uX4Ge_PiNCIo9kS30GcnhU",
-                json={
-                    "prompt": user_question,
-                    "maxOutputTokens": 4096,
-                    "temperature": 0,
-                    "topP": 1,
-                }
-            ) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    query_response = data.get('output', 'No response generated.')
-                else:
-                    query_response = "An error occurred while contacting the API."
-                    await log_to_channel(bot, user_name, user_id, "/query", f"HTTP Error: {response.status}")
+        # Generate content using the model
+        api_response = model.generate_content(user_question)
+        query_response = api_response.text  # Get the generated text
 
     except Exception as e:
         query_response = "An error occurred. Contact @AskIQSupport."
@@ -453,7 +442,6 @@ async def query_command(bot: Client, message: Message):
     # Edit the response based on whether it was successful or not
     await sent_message.edit_text(query_response)
     await log_to_channel(bot, user_name, user_id, "/query", query_response)
-
 
 
 
