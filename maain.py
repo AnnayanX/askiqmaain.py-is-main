@@ -463,7 +463,7 @@ async def query_command(bot: Client, message: Message):
 
     except Exception as exc:
         query_response = "An error occurred. Contact @AskIQSupport."
-        await log_to_channel(bot, user_name, user_id, f"Error: {exc}")
+        await log_to_channel(bot, user_name, user_id, "/query", f"Error: {str(exc)}")
 
     # Edit the response with the generated content
     await sent_message.edit_text(query_response)
@@ -471,3 +471,4 @@ async def query_command(bot: Client, message: Message):
 
 # Start the bot
 app.run()
+
