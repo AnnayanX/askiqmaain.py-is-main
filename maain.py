@@ -400,6 +400,8 @@ async def add_pre_command(bot: Client, message: Message):
 
     await message.reply(response)
     await log_to_channel(bot, "Bot Owner", user_id, "/addpre", response)
+import aiohttp  # Make sure to import aiohttp for async HTTP requests
+
 @app.on_message(filters.command("query"))
 async def query_command(bot: Client, message: Message):
     user_id = message.from_user.id
@@ -427,73 +429,32 @@ async def query_command(bot: Client, message: Message):
     sent_message = await message.reply("💭 Thinking...")
 
     try:
-        chat_completion = openai.ChatCompletion.create(
-            model="Gemma-2-27B-IT",
-            messages=[{"role": "user", "content": user_question}],
-            max_tokens=4096, 
-            temperature=0,
-            top_p=1,
-        )
-        query_response = chat_completion.choices[0].message['content']
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=AIzaSyCvbPRwFY0T3uX4Ge_PiNCIo9kS30GcnhU",
+                json={
+                    "prompt": user_question,
+                    "maxOutputTokens": 4096,
+                    "temperature": 0,
+                    "topP": 1,
+                }
+            ) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    query_response = data.get('output', 'No response generated.')
+                else:
+                    query_response = "An error occurred while contacting the API."
+                    await log_to_channel(bot, user_name, user_id, "/query", f"HTTP Error: {response.status}")
+
     except Exception as e:
         query_response = "An error occurred. Contact @AskIQSupport."
         await log_to_channel(bot, user_name, user_id, "/query", f"Error: {e}")
-    
+
     # Edit the response based on whether it was successful or not
     await sent_message.edit_text(query_response)
     await log_to_channel(bot, user_name, user_id, "/query", query_response)
 
 
-# @app.on_message(filters.command("addowner"))
-async def add_owner_command(bot: Client, message: Message):
-    user_id = message.from_user.id
-
-    if user_id != OWNER_ID:
-        response = "You are not authorized to use this command."
-        await message.reply(response)
-        return
-
-    # Check if an ID was provided
-    if len(message.command) < 2:
-        response = "Please provide a user ID to promote to owner."
-        await message.reply(response)
-        return
-
-    try:
-        target_id = int(message.command[1])
-    except ValueError:
-        response = "Invalid user ID format. Please provide a valid numeric user ID."
-        await message.reply(response)
-        return
-
-    # Add the new owner ID to a list (you can store this in a DB or a file as needed)
-    owners_col = db["owners"]
-    if not owners_col.find_one({"user_id": target_id}):
-        owners_col.insert_one({"user_id": target_id})
-        response = f"User with ID {target_id} has been added as an owner."
-    else:
-        response = f"User with ID {target_id} is already an owner."
-
-    await message.reply(response)
-    await log_to_channel(bot, "Bot Owner", user_id, "/addowner", response)
-
-# Helper function to check if user is an owner
-def is_user_owner(user_id):
-    owners_col = db["owners"]
-    return owners_col.find_one({"user_id": user_id}) is not None
-
-# Example command that requires owner status
-@app.on_message(filters.command("some_owner_command"))
-async def some_owner_command(bot: Client, message: Message):
-    user_id = message.from_user.id
-
-    if not is_user_owner(user_id):
-        response = "You do not have permission to use this command."
-        await message.reply(response)
-        return
-
-    # Command logic for owners
-    await message.reply("This command is available to owners only!")
 
 
 # Start the bot
