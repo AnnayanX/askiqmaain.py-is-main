@@ -402,6 +402,7 @@ async def add_pre_command(bot: Client, message: Message):
     await log_to_channel(bot, "Bot Owner", user_id, "/addpre", response)
 import aiohttp  # Make sure to import aiohttp for async HTTP requests
 
+from genai import GenerativeModel  # Ensure this import is included
 @app.on_message(filters.command("query"))
 async def query_command(bot: Client, message: Message):
     user_id = message.from_user.id
@@ -430,18 +431,24 @@ async def query_command(bot: Client, message: Message):
 
     model = GenerativeModel("gemini-1.5-flash")  # Initialize the model
 
+    # Start a chat session
+    chat = model.start_chat(history=[
+        {"role": "user", "parts": "Hello"},
+        {"role": "model", "parts": "Great to meet you. What would you like to know?"},
+    ])
+
     try:
-        # Generate content using the model
-        api_response = model.generate_content(user_question)
-        query_response = api_response.text  # Get the generated text
+        # Send the user's question to the chat model
+        chat_response = chat.send_message(user_question)
+        response_text = chat_response.text
 
     except Exception as e:
-        query_response = "An error occurred. Contact @AskIQSupport."
-        await log_to_channel(bot, user_name, user_id, "/query", f"Error: {e}")
+        response_text = "An error occurred. Contact @AskIQSupport."
+        await log_to_channel(bot, user_name, user_id, f"Error: {e}")
 
     # Edit the response based on whether it was successful or not
-    await sent_message.edit_text(query_response)
-    await log_to_channel(bot, user_name, user_id, "/query", query_response)
+    await sent_message.edit_text(response_text)
+    await log_to_channel(bot, user_name, user_id, "/query", response_text)
 
 
 
