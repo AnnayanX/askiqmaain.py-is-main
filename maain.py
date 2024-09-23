@@ -444,8 +444,7 @@ async def query_command(bot: Client, message: Message):
     await log_to_channel(bot, user_name, user_id, "/query", query_response)
 
 
-# /addowner command (Owner-only)
-@app.on_message(filters.command("addowner"))
+# @app.on_message(filters.command("addowner"))
 async def add_owner_command(bot: Client, message: Message):
     user_id = message.from_user.id
 
@@ -468,7 +467,7 @@ async def add_owner_command(bot: Client, message: Message):
         return
 
     # Add the new owner ID to a list (you can store this in a DB or a file as needed)
-    owners_col = db["owners"]  # Create a collection for owners if it doesn't exist
+    owners_col = db["owners"]
     if not owners_col.find_one({"user_id": target_id}):
         owners_col.insert_one({"user_id": target_id})
         response = f"User with ID {target_id} has been added as an owner."
@@ -480,7 +479,21 @@ async def add_owner_command(bot: Client, message: Message):
 
 # Helper function to check if user is an owner
 def is_user_owner(user_id):
+    owners_col = db["owners"]
     return owners_col.find_one({"user_id": user_id}) is not None
+
+# Example command that requires owner status
+@app.on_message(filters.command("some_owner_command"))
+async def some_owner_command(bot: Client, message: Message):
+    user_id = message.from_user.id
+
+    if not is_user_owner(user_id):
+        response = "You do not have permission to use this command."
+        await message.reply(response)
+        return
+
+    # Command logic for owners
+    await message.reply("This command is available to owners only!")
 
 
 # Start the bot
