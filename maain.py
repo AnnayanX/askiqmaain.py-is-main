@@ -405,23 +405,38 @@ from pyrogram import Client, filters
 from pyrogram.types import Message
 from urllib.parse import quote
 
+import aiohttp  # Optional, if needed for other purposes
+from pyrogram import Client, filters
+from pyrogram.types import Message
+from krutrim_cloud import KrutrimCloud
+from dotenv import load_dotenv
+
+load_dotenv()  # Load environment variables from a .env file
+
+# Initialize the KrutrimCloud client
+client = KrutrimCloud()
+model_name = "Gemma-2-27B-IT"
+
 @app.on_message(filters.command("query"))
 async def query_command(bot: Client, message: Message):
     user_id = message.from_user.id
     user_name = message.from_user.username or message.from_user.first_name
     user_question = ' '.join(message.command[1:])
 
+    # Check if the user is blocked
     if is_user_blocked(user_id):
         response = "You are blocked from using this bot."
         await message.reply(response)
         await log_to_channel(bot, user_name, user_id, "/query", response)
         return
 
+    # Check if the user provided a question
     if not user_question:
         response = "Please provide a question for the query."
         await message.reply(response)
         return
 
+    # Check user credits
     user = users_col.find_one({"user_id": user_id})
     if user and not is_user_pro(user_id) and user["credits"] <= 0:
         response = "Your credits are exhausted. Contact @AskIQSupport to upgrade to premium."
@@ -429,29 +444,29 @@ async def query_command(bot: Client, message: Message):
         await log_to_channel(bot, user_name, user_id, "/query", response)
         return
 
+    # Notify user that the bot is processing the query
     sent_message = await message.reply("💭 Thinking...")
 
-    # URL encode the user question
-    encoded_question = quote(user_question)
-
-    # Define the API endpoint with max_tokens
-    api_url = f"https://api.qewertyy.dev/models?model_id=20&prompt={encoded_question}&max_tokens=4096"
+    # Prepare the messages for the API
+    messages = [
+        {
+            "role": "user",
+            "content": user_question,
+        },
+    ]
 
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(api_url) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    query_response = data.get("response", "No response generated.")
-                else:
-                    query_response = "An error occurred while contacting the API."
-                    await log_to_channel(bot, user_name, user_id, f"HTTP Error: {response.status}")
+        # Make the API call
+        response = client.chat.completions.create(model=model_name, messages=messages)
 
-    except Exception as e:
+        # Access generated output
+        query_response = response.choices[0].message.content  # type:ignore
+
+    except Exception as exc:
         query_response = "An error occurred. Contact @AskIQSupport."
-        await log_to_channel(bot, user_name, user_id, f"Error: {e}")
+        await log_to_channel(bot, user_name, user_id, f"Error: {exc}")
 
-    # Edit the response based on whether it was successful or not
+    # Edit the response with the generated content
     await sent_message.edit_text(query_response)
     await log_to_channel(bot, user_name, user_id, "/query", query_response)
 
