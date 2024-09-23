@@ -403,19 +403,13 @@ async def add_pre_command(bot: Client, message: Message):
 import aiohttp  # Ensure you have aiohttp installed
 from pyrogram import Client, filters
 from pyrogram.types import Message
-from urllib.parse import quote
-
-import aiohttp  # Optional, if needed for other purposes
-from pyrogram import Client, filters
-from pyrogram.types import Message
-from krutrim_cloud import KrutrimCloud
 from dotenv import load_dotenv
+import json
 
 load_dotenv()  # Load environment variables from a .env file
 
-# Initialize the KrutrimCloud client
-client = KrutrimCloud()
-model_name = "Gemma-2-27B-IT"
+API_KEY = "aM-6dURCfnStAHx9PjCXpGE1"  # Your API key
+API_URL = "https://cloud.olakrutrim.com/v"  # Your API endpoint
 
 @app.on_message(filters.command("query"))
 async def query_command(bot: Client, message: Message):
@@ -447,20 +441,32 @@ async def query_command(bot: Client, message: Message):
     # Notify user that the bot is processing the query
     sent_message = await message.reply("💭 Thinking...")
 
-    # Prepare the messages for the API
-    messages = [
-        {
-            "role": "user",
-            "content": user_question,
-        },
-    ]
+    # Prepare the request payload
+    payload = {
+        "model": "Gemma-2-27B-IT",  # Specify the model
+        "messages": [
+            {
+                "role": "user",
+                "content": user_question,
+            }
+        ],
+        "max_tokens": 4096  # Limit the output to 4096 tokens
+    }
+
+    headers = {
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json"
+    }
 
     try:
-        # Make the API call
-        response = client.chat.completions.create(model=model_name, messages=messages)
-
-        # Access generated output
-        query_response = response.choices[0].message.content  # type:ignore
+        async with aiohttp.ClientSession() as session:
+            async with session.post(API_URL, json=payload, headers=headers) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    query_response = data.get("response", "No response generated.")
+                else:
+                    query_response = "An error occurred while contacting the API."
+                    await log_to_channel(bot, user_name, user_id, f"HTTP Error: {response.status}")
 
     except Exception as exc:
         query_response = "An error occurred. Contact @AskIQSupport."
@@ -469,6 +475,9 @@ async def query_command(bot: Client, message: Message):
     # Edit the response with the generated content
     await sent_message.edit_text(query_response)
     await log_to_channel(bot, user_name, user_id, "/query", query_response)
+
+
+
 
 
 
