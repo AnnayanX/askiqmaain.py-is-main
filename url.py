@@ -16,7 +16,7 @@ blocked_users_col = db["blocked_users"]
 
 # Telegram Bot setup with provided API credentials
 app = Client(
-    "AskIQ_Bot",
+    "AskurlIQ_Bot",
     api_id=28731539,
     api_hash="7501dd35f99436e403118ac545d50b4b",
     bot_token="7054201917:AAHdcScMDGs0OuRpwygitBbgOv2I_u5kRQ4"
