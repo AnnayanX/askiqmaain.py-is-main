@@ -468,6 +468,72 @@ async def query_command(bot: Client, message: Message):
     # Edit the response with the generated content
     await sent_message.edit_text(query_response)
     await log_to_channel(bot, user_name, user_id, "/query", query_response)
+#FLUX AI IMAGE BY /PIC on HF
+
+import requests
+from io import BytesIO
+from PIL import Image
+from pyrogram.types import InputMediaPhoto, Message
+from pyrogram import Client, filters
+
+API_URL = "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-dev"
+headers = {"Authorization": "Bearer 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"}
+
+# Function to query Hugging Face API and get image bytes (make it async)
+async def query_image_async(prompt):
+    response = requests.post(API_URL, headers=headers, json={"inputs": prompt})
+    if response.status_code == 200:
+        return response.content
+    else:
+        return None
+
+# Log function to send a log message to the logger group
+async def log_to_channel(bot, user_name, user_id, command, details):
+    logger_group = "@LoggerCHenciencienciencieni"  # Your logger group
+    log_message = f"User: {user_name} (ID: {user_id}) used {command}\nDetails: {details}"
+    await bot.send_message(logger_group, log_message)
+
+# /pic command to generate an image from Hugging Face and send the image
+@app.on_message(filters.command("pic") & filters.group)
+async def pic_command(bot: Client, message: Message):
+    user_id = message.from_user.id
+    user_name = message.from_user.username or message.from_user.first_name
+    prompt = ' '.join(message.command[1:])  # Get the prompt after the /pic command
+
+    # Validate prompt
+    if not prompt:
+        await message.reply("Please provide a prompt for the image generation.")
+        return
+
+    # Send an initial 🌸 emoji as a placeholder
+    response_message = await message.reply("🌸 Generating your image...")
+
+    # Query the Hugging Face model asynchronously for the image
+    image_bytes = await query_image_async(prompt)
+
+    if image_bytes:
+        # Load the image from bytes
+        image = Image.open(BytesIO(image_bytes))
+        
+        # Save the image to a file-like object for sending
+        image_io = BytesIO()
+        image.save(image_io, format="PNG")
+        image_io.seek(0)
+        
+        # Edit the original 🌸 message and send the generated image
+        await response_message.edit_text("Here is your image:")
+        await response_message.reply_photo(
+            photo=image_io,
+            caption="@AskIQBot"  # Add caption if needed
+        )
+    else:
+        await response_message.edit_text("Failed to generate an image. Please try again later.")
+
+    # Log the command execution to the logger group
+    await log_to_channel(bot, user_name, user_id, "/pic", f"Prompt: {prompt}")
+
+
+
 
 # Start the bot
 app.run()
