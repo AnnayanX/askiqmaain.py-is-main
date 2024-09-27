@@ -131,7 +131,7 @@ async def ask_command(bot: Client, message: Message):
             users_col.update_one({"user_id": user_id}, {"$inc": {"credits": -1}})
         await log_to_channel(bot, user_name, user_id, "/ask", openai_response)
     else:
-        response = "Your credits are exhausted. Contact @AskIQSupport to upgrade to premium."
+        response = "Your credits are exhausted. Contact @Pragyan to upgrade to premium."
         await message.reply(response)
         await log_to_channel(bot, user_name, user_id, "/ask", response)
 
@@ -434,7 +434,7 @@ async def query_command(bot: Client, message: Message):
     # Check user credits
     user = users_col.find_one({"user_id": user_id})
     if user and not is_user_pro(user_id) and user["credits"] <= 0:
-        response = "Your credits are exhausted. Contact @AskIQSupport to upgrade to premium."
+        response = "Your credits are exhausted. Contact @Pragyan to upgrade to premium."
         await message.reply(response)
         await log_to_channel(bot, user_name, user_id, "/query", response)
         return
@@ -462,7 +462,7 @@ async def query_command(bot: Client, message: Message):
         query_response = response.choices[0].message.content  # type:ignore
 
     except Exception as exc:
-        query_response = "An error occurred. Contact @AskIQSupport."
+        query_response = "An error occurred. Contact @Pragyan."
         await log_to_channel(bot, user_name, user_id, "/query", f"Error: {str(exc)}")
 
     # Edit the response with the generated content
